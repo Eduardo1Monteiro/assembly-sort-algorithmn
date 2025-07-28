@@ -8,6 +8,7 @@ section .bss
   array resd 1000
   readBuffer resb 1
 
+// Read Logic
 readIntegers:
   xor eax, eax
   mov esi, 1
@@ -64,6 +65,34 @@ skipWhiteSpace:
     imul esi
 
 .finished: 
+  ret
+
+// Bubble Sort 
+bubbleSort:
+  mov ecx, [arrayLength]
+  dec ecx 
+
+.arrayIterationLoop:
+  push ecx 
+  mov edi, array
+
+.sortLoop: 
+  mov eax, [edi]
+  mov ebx, [edi + 4]
+
+  cmp eax, ebx 
+  jle .noChange
+  
+  mov [edi], ebx 
+  mov [edi + 4], eax
+
+.noChange:
+  add edi, 4
+  dec ecx 
+  cmp ecx, 0 
+  jne .sortLoop
+  pop ecx
+  loop .arrayIterationLoop
   ret
 
 exitError:
