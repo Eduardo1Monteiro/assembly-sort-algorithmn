@@ -7,6 +7,7 @@ section .bss
   arrayLength resd 1
   array resd 1000
   readBuffer resb 1
+  writeBuffer resb 12
 
 // Read Logic
 readIntegers:
@@ -89,12 +90,47 @@ bubbleSort:
 .noChange:
   add edi, 4
   dec ecx 
-  cmp ecx, 0 
-  jne .sortLoop
+  jnz .sortLoop
   pop ecx
   loop .arrayIterationLoop
   ret
 
+// Write Logic 
+writeIntegers:
+  mov edi, writeBuffer + 10
+  test eax, eax 
+  jns .setupDivisor 
+  neg eax 
+  push eax 
+  mov eax, 4
+  mov ebx, [outputFile]
+  mov byte [edi], '-'
+  mov ecx, edi 
+  mov edx, 1
+  int 0x80 
+  pop eax 
+
+.setupDivisor:
+  mov ebx, 10
+
+.convertLoop:
+  xor edx, edx 
+  div ebx
+  add edx, '0'
+  dec edi 
+  mov [edi], dl 
+  test eax, eax 
+  jnz .convertLoop 
+
+  mov ecx, edi
+  mov edx, writeBuffer + 11
+  sub edx, ecx 
+  mov eax, 4
+  mov ebx, [outputFile]
+  int 0x80 
+  ret
+
+// Error Handling 
 exitError:
     mov eax, 1
     mov ebx, 1
@@ -143,6 +179,33 @@ readLoop:
 .endReadLoop: 
   mov [arrayLength], ecx 
 
+// Sorting 
+  call bubbleSort 
+
+// Setup the writing logic 
+  mov ecx, [arrayLength]
+  mov esi, array
+
+writeToOutputFile:
+  push ecx 
+  mov eax, [esi]
+  call writeIntegers
+  add esi, 4 
+  pop ecx
+  loop .checkSeparator 
+  jmp .closeFiles 
+
+.checkSeparator: 
+  cmp ecx, 1
+  je writeToOutputFile 
+  mov eax, 4 
+  mov ebx, [outputFile]
+  mov ecx, separator
+  mov edx, 1
+  int 0x80 
+  jmp writeToOutputFile
+
+.closeFiles: 
   // close input file 
   mov eax, 6
   mov ebx, [inputFile]
