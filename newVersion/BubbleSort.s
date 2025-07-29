@@ -11,7 +11,7 @@
 # =================================================================
 main:
     addi sp, sp, -16
-    sw   ra, 12(sp)
+    sw  ra, 12(sp)
 
     # Prepara para ler os inteiros. s4 e s6 serão preenchidos em readIntegers.
     la s4, array
@@ -19,11 +19,16 @@ main:
 
     mv s6, a0
 
-    la   a0, array
-    mv   a1, s6          # s6 foi definido em readIntegers
-    jal  ra, printArray
+    # Chamar o Bubble Sort
+    mv a0, s4           # Endereço do array (base)
+    mv a1, s6           # Número de elementos (N)
+    jal ra, bubbleSort
 
-    lw   ra, 12(sp)
+    la  a0, array
+    mv  a1, s6           # s6 foi definido em readIntegers
+    jal ra, printArray
+
+    lw  ra, 12(sp)
     addi sp, sp, 16
     ret
 
@@ -33,13 +38,13 @@ main:
 readIntegers:
     # --- Prólogo ---
     addi sp, sp, -32
-    sw   ra, 28(sp)
-    sw   s2, 24(sp)
-    sw   s3, 20(sp)
-    sw   s4, 16(sp)
-    sw   s5, 12(sp)
-    sw   s6, 8(sp)
-    sw   s7, 4(sp)
+    sw  ra, 28(sp)
+    sw  s2, 24(sp)
+    sw  s3, 20(sp)
+    sw  s4, 16(sp)
+    sw  s5, 12(sp)
+    sw  s6, 8(sp)
+    sw  s7, 4(sp)
 
     # --- FASE 1: LER N ---
     li s2, 0
@@ -105,14 +110,85 @@ readIntegers:
     mv a0, s6
 
     # --- Epílogo ---
-    lw   ra, 28(sp)
-    lw   s2, 24(sp)
-    lw   s3, 20(sp)
-    lw   s4, 16(sp)
-    lw   s5, 12(sp)
-    lw   s6, 8(sp)
-    lw   s7, 4(sp)
+    lw  ra, 28(sp)
+    lw  s2, 24(sp)
+    lw  s3, 20(sp)
+    lw  s4, 16(sp)
+    lw  s5, 12(sp)
+    lw  s6, 8(sp)
+    lw  s7, 4(sp)
     addi sp, sp, 32
+    ret
+
+# =================================================================
+# ALGORITMO BUBBLE SORT
+# =================================================================
+# bubbleSort: Ordena um array de inteiros usando o algoritmo Bubble Sort.
+# Argumentos:
+#   a0: endereço base do array
+#   a1: número de elementos no array (N)
+bubbleSort:
+    # --- Prólogo ---
+    addi sp, sp, -28
+    sw ra, 24(sp)
+    sw s0, 20(sp)   # s0 = array_ptr (endereço base do array)
+    sw s1, 16(sp)   # s1 = N (número de elementos)
+    sw s2, 12(sp)   # s2 = i (índice do loop externo)
+    sw s3, 8(sp)    # s3 = j (índice do loop interno)
+    sw s4, 4(sp)    # s4 = swapped_flag (0 = false, 1 = true)
+
+    mv s0, a0       # array_ptr = a0
+    mv s1, a1       # N = a1
+
+    # Outer loop (i = 0 to N-2)
+    li s2, 0        # i = 0
+outer_loop_start:
+    addi t0, s1, -1 # N-1
+    bge s2, t0, outer_loop_end # if i >= N-1, exit outer loop
+
+    li s4, 0        # swapped_flag = 0 (reset for each pass)
+
+    # Inner loop (j = 0 to N-2-i)
+    li s3, 0        # j = 0
+inner_loop_start:
+    sub t0, s1, s2  # N - i
+    addi t0, t0, -1 # N - i - 1
+    bge s3, t0, inner_loop_end # if j >= N-i-1, exit inner loop
+
+    # Calculate address of array[j]
+    slli t1, s3, 2  # j * 4
+    add t2, s0, t1  # array_ptr + (j * 4) = &array[j]
+
+    # Load array[j] and array[j+1]
+    lw t3, 0(t2)    # t3 = array[j]
+    lw t4, 4(t2)    # t4 = array[j+1] (array[j+1] is at array_ptr + (j * 4) + 4)
+
+    # Compare: if array[j] > array[j+1]
+    ble t3, t4, no_swap # if array[j] <= array[j+1], no swap needed
+
+    # Swap array[j] and array[j+1]
+    sw t4, 0(t2)    # array[j] = t4 (array[j+1])
+    sw t3, 4(t2)    # array[j+1] = t3 (array[j])
+    li s4, 1        # swapped_flag = 1 (a swap occurred)
+
+no_swap:
+    addi s3, s3, 1  # j++
+    j inner_loop_start
+
+inner_loop_end:
+    beqz s4, outer_loop_end # If no swaps occurred in this pass, array is sorted. Break.
+    addi s2, s2, 1  # i++
+    j outer_loop_start
+
+outer_loop_end:
+    # --- Epílogo ---
+    lw ra, 24(sp)
+    lw s0, 20(sp)
+    lw s1, 16(sp)
+    lw s2, 12(sp)
+    lw s3, 8(sp)
+    lw s4, 4(sp)
+    addi sp, sp, 28
     ret
 
 # =================================================================
@@ -136,7 +212,7 @@ printArray:
     li s0, 0       # i = 0
 
 print_array_loop:
-    bge s0, s2, end_print_array  # Se i >= N, termina
+    bge s0, s2, end_print_array # Se i >= N, termina
 
     # Carrega o número do array e imprime
     lw a0, 0(s1)
@@ -152,8 +228,8 @@ print_comma:
     jal ra, uart_write_char
 
 after_comma:
-    addi s1, s1, 4  # Avança o ponteiro do array
-    addi s0, s0, 1  # i++
+    addi s1, s1, 4 # Avança o ponteiro do array
+    addi s0, s0, 1 # i++
     j print_array_loop
 
 end_print_array:
@@ -227,22 +303,22 @@ end_print_integer:
 # SUB-ROTINAS DE I/O DA UART
 # =================================================================
 readCharUART:
-    li   t1, uartBasicAddress
-    li   t2, uartBasicAddress + 5
-    li   t3, 0b1
+    li  t1, uartBasicAddress
+    li  t2, uartBasicAddress + 5
+    li  t3, 0b1
 .poll_loop_uart:
-    lb   t4, 0(t2)
-    and  t4, t4, t3
+    lb  t4, 0(t2)
+    and t4, t4, t3
     beqz t4, .poll_loop_uart
-    lb   a0, 0(t1)
+    lb  a0, 0(t1)
     ret
 
 uart_write_char:
-    li   t1, uartBasicAddress + 5
+    li  t1, uartBasicAddress + 5
 write_poll:
-    lbu  t0, 0(t1)
+    lbu t0, 0(t1)
     andi t0, t0, 0x20
-    beq  t0, zero, write_poll
-    li   t0, uartBasicAddress
-    sb   a0, 0(t0)
+    beq t0, zero, write_poll
+    li  t0, uartBasicAddress
+    sb  a0, 0(t0)
     ret
